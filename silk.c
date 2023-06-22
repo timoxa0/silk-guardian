@@ -1,50 +1,129 @@
-#define pr_fmt(fmt)	KBUILD_MODNAME ": " fmt
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/usb.h>
 #include <linux/reboot.h>
+
+#include <linux/proc_fs.h>
+
 #include "config.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Greg Kroah-Hartman and Nate Brune");
+MODULE_AUTHOR("Greg Kroah-Hartman and Nate Brune, adjusted by kmille");
 MODULE_DESCRIPTION("A module that protects you from having a terrible horrible no good very bad day.");
+
+
+static struct proc_dir_entry *ent;
+static int enabled = 1;
+
+#define BUFSIZE 2000
+
+// called on echo 0 > /proc/silk
+static ssize_t write_callback(struct file *file, const char __user *ubuf, size_t count, loff_t *ppos)
+{
+	char buf[BUFSIZE];
+    int num, i, len;
+	
+    if(*ppos > 0 || count > BUFSIZE)
+		return -EFAULT;
+
+    if(copy_from_user(buf, ubuf, count))
+		return -EFAULT;
+
+    i = sscanf(buf, "%d", &num);
+    if (i != 1) {
+        printk("Could not convert input to a number. Got: %s\n", buf);
+        return -EFAULT;
+    }
+
+    if (num == 0) {
+        enabled = 0;
+        pr_info("turned off\n");
+    } else if (num == 1) {
+        enabled = 1;
+        pr_info("turned on\n");
+    } else {
+        printk("Invalid input: %d (use 1 to enable, 0 to disable)\n", num);
+        return -EFAULT;
+    }
+
+    len = strlen(buf);
+    *ppos = len;
+    return len;
+}
+
+// called on cat /proc/silk
+static ssize_t read_callback(struct file *file, char __user *ubuf,size_t count, loff_t *ppos)
+{
+    char buf[BUFSIZE];
+	int i, len = 0;
+    const struct usb_device_id* ptr = whitelist_table;
+    const struct usb_device_id* endPtr = whitelist_table + sizeof(whitelist_table)/sizeof(whitelist_table[0]);
+    
+    if(*ppos > 0 || count < BUFSIZE)
+		return 0;
+    
+    if (enabled) {
+	    len = sprintf(buf, "silk is turned on\n");
+    } else {
+	    len = sprintf(buf, "silk is turned off\n");
+    }
+	    
+    len += sprintf(buf + len, "version: %s\n", silk_version);
+#ifdef USE_SHELL_COMMAND
+    // silly buffer overflow prevention?
+    if(strlen(kill_command_argv[2]) < 100) {
+        len += sprintf(buf + len, "shell command is enabled: %s\n", kill_command_argv[2]);
+    } else {
+        len += sprintf(buf + len, "shell command is enabled\n");
+    }
+#else
+    len += sprintf(buf + len, "shell command is disabled\n");
+#endif
+    
+    // i is only used for buffer overflow prevention ...
+    while ( ptr < endPtr && i < 50 ){
+       len += sprintf(buf + len, "whitelisted device: 0x%04x, 0x%04x\n", ptr->idVendor, ptr->idProduct);
+       ptr++;
+       i++;
+    }
+
+    if(copy_to_user(ubuf,buf,len))
+		return -EFAULT;
+	*ppos = len;
+	return len;
+
+}
+
+
 
 static void panic_time(struct usb_device *usb)
 {
-  int i;
-  struct device *dev;
+  int ret = 0;
 
-  pr_info("shredding...\n");
-  for (i = 0; remove_files[i] != NULL; ++i) {
-    char *shred_argv[] = {
-      "/usr/bin/shred",
-      "-f", "-u", "-n",
-      shredIterations,
-      remove_files[i],
-      NULL,
-    };
-    call_usermodehelper(shred_argv[0], shred_argv,
-            NULL, UMH_WAIT_EXEC);
+  if (!enabled) {
+    pr_info("silk: currently disabled, doing nothing\n");
+    return;
   }
-  printk("...done.\n");
-
-  #ifdef WIPE_RAM
-    printk("running sdmem");
-    call_usermodehelper(sdmem_argv[0], sdmem_argv, NULL, UMH_WAIT_EXEC);
-  #endif
-
-  for (dev = &usb->dev; dev; dev = dev->parent)
-    mutex_unlock(&dev->mutex);
-  printk("Syncing & powering off.\n");
   
-  #ifdef USE_ORDERLY_SHUTDOWN
+#ifdef USE_SHELL_COMMAND
+    printk("silk: running shell command\n");
+    ret = call_usermodehelper(kill_command_argv[0], kill_command_argv, NULL, UMH_WAIT_EXEC);
+    if (ret != 0) {
+        printk("silk: error in call to usermodehelper: %i\n", ret);
+        return;
+    }
+#endif
+  
+#ifdef USE_SHUTDOWN
+  struct device *dev;
+    for (dev = &usb->dev; dev; dev = dev->parent)
+        mutex_unlock(&dev->mutex);
+    printk("silk: syncing && powering off\n");
     orderly_poweroff(true);
-  #else
-    kernel_power_off();
-  #endif
+#endif
 }
+
 
 /*
  * returns 0 if no match, 1 if match
@@ -69,7 +148,8 @@ static int usb_match_device(struct usb_device *dev,
     return 0;
 
   if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_HI) &&
-      (id->bcdDevice_hi < le16_to_cpu(dev->descriptor.bcdDevice)))
+      
+          (id->bcdDevice_hi < le16_to_cpu(dev->descriptor.bcdDevice)))
     return 0;
 
   if ((id->match_flags & USB_DEVICE_ID_MATCH_DEV_CLASS) &&
@@ -101,12 +181,12 @@ static void usb_dev_change(struct usb_device *dev)
       dev_id = &whitelist_table[i];
       if (usb_match_device(dev, dev_id))
       {
-         pr_info("Device is ignored\n");
+         pr_info("silk: device 0x%04x, 0x%04x is ignored\n", dev_id->idVendor, dev_id->idProduct);
          return;
       }
    }
 
-  /* Not a device we were ignoring, something bad went wrong, panic! */
+  pr_info("silk: unknown device 0x%04x, 0x%04x (not whitelisted)\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
   panic_time(dev);
 }
 
@@ -127,6 +207,12 @@ static int notify(struct notifier_block *self, unsigned long action, void *dev)
   return 0;
 }
 
+static struct proc_ops myops =
+{
+	.proc_read = read_callback,
+	.proc_write = write_callback,
+};
+
 static struct notifier_block usb_notify = {
   .notifier_call = notify,
 };
@@ -134,7 +220,11 @@ static struct notifier_block usb_notify = {
 static int __init silk_init(void)
 {
   usb_register_notify(&usb_notify);
-  pr_info("Now watching USB devices...\n");
+
+  ent = proc_create("silk", 0600, NULL, &myops);
+  if (ent == NULL)
+	  return -ENOMEM;
+  pr_info("silk: now watching USB devices\n");
   return 0;
 }
 module_init(silk_init);
@@ -142,6 +232,7 @@ module_init(silk_init);
 static void __exit silk_exit(void)
 {
   usb_unregister_notify(&usb_notify);
-  pr_info("No longer watching USB devices.\n");
+  proc_remove(ent);
+  pr_info("silk: no longer watching USB devices\n");
 }
 module_exit(silk_exit);
