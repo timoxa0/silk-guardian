@@ -8,10 +8,9 @@ Check out how it looks like:
 Configuration takes play in `/etc/silk.yaml`:
 
 ```bash
-kmille@linbox:~ sudo cat /etc/silk.yaml
-[sudo] password for kmille:
+[root@archlinux vagrant]# cat /etc/silk.yaml
 ---
-#shell_command: echo $(date) >> /tmp/silk.txt
+shell_command: echo $(date) >> /tmp/silk.txt
 shutdown: false
 whitelist:
   - 0x1234, 0x5678
@@ -68,7 +67,7 @@ whitelisted device: 0x1d6b, 0x0001
 whitelisted device: 0x1312, 0x1234
 ```
 
-You can turn it off/on temporarly with 
+You can turn it off/on temporarily with
 ```bash
 [root@archlinux vagrant]# echo 0 > /proc/silk
 ```
