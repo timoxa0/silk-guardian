@@ -12,3 +12,4 @@ tags
 cscope.*
 ncscope.*
 *.patch
+.vagrant

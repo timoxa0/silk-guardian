@@ -1,0 +1,23 @@
+pacman -Syu
+pacman -Fy
+pacman -S fd ripgrep vim tmux git
+pacman -S --needed make gcc linux-headers usbutils base-devel
+
+vim ~/.tmux.conf
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+
+# resizing panes in vim style
+bind-key -r J resize-pane -D
+bind-key -r K resize-pane -U
+bind-key -r H resize-pane -L
+bind-key -r L resize-pane -R
+
+tmux
+git clone https://github.com/kmille/silk-guardian.git
+cd silk-guardian
+reboot
+make install
+
