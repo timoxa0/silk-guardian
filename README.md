@@ -81,7 +81,7 @@ Jun 19 19:43:33 linux kernel: LKRG: ALERT: BLOCK: UMH: Executing program name /u
 
 ## Development
 
-In the dev directory, there is a Vagrantfile. The SETUP commands has some helpful commands.
+In the dev directory, there is a Vagrantfile. The SETUP file has some helpful commands.
 
 This is the old documentation:
 
