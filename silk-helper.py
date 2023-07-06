@@ -37,7 +37,7 @@ char *kill_command_argv[] = {
 
 
 def fail(e):
-    print(e)
+    print(e, file=sys.stderr)
     sys.exit(1)
 
 
@@ -62,7 +62,7 @@ def generate_header_file():
     environment = jinja2.Environment()
     template = environment.from_string(config_template)
 
-    warn("Generating config.h ...")
+    print("Generating config.h ...", file=sys.stderr)
 
     if "PACKAGE_VERSION" in os.environ:
         print(f"#define silk_version \"{os.environ['PACKAGE_VERSION']}\"")
