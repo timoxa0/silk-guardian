@@ -1,5 +1,5 @@
 ## silk-guradian
-silk-guardian is a kill switch for unknown usb devices, build as kernel module. This is a fork of @NateBrune's silk-guardian. I've  added some features, more usabilty and packaged it as a dkms module. There is an [Arch AUR package](https://aur.archlinux.org/packages/silk-guardian-dkms) for it. 
+silk-guardian is a kill switch for unknown usb devices, build as kernel module. This is a fork of [NateBrune's silk-guardian](https://github.com/NateBrune/silk-guardian). I've  added some features, more usabilty and packaged it as a dkms module. There is an [Arch AUR package](https://aur.archlinux.org/packages/silk-guardian-dkms) for it. 
 
 Check out how it looks like:
 
@@ -78,6 +78,8 @@ silk-guardian conflicts with [lkrg](https://github.com/lkrg-org/lkrg). It does n
 ```
 Jun 19 19:43:33 linux kernel: LKRG: ALERT: BLOCK: UMH: Executing program name /usr/bin/bash
 ```
+
+silk-guardian only checks newly attached devices during runtime. A hardware keylogger plugged-in before boot will not be blocked! You can use [USBGuard](https://github.com/USBGuard/usbguard) to prevent that.
 
 ## Development
 
