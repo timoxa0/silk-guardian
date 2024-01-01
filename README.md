@@ -5,7 +5,7 @@ Check out how it looks like:
 
 [![asciicast](https://asciinema.org/a/vDXyJBwfYdV4TVpYkcRdv5y6e.svg)](https://asciinema.org/a/vDXyJBwfYdV4TVpYkcRdv5y6e)
 
-Configuration takes play in `/etc/silk.yaml`:
+Configuration takes place in `/etc/silk.yaml`:
 
 ```bash
 [root@archlinux vagrant]# cat /etc/silk.yaml
