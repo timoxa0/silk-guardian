@@ -73,6 +73,23 @@ You can turn it off/on temporarily with
 ```
 This is nice if you want to add a new device that needs to be whitelisted. silk-guardian logs can be found with `journalctl -k`.
 
+## Rebuild
+If you want to whitelist/use a new device
+1) temporarly disable silk-guardian with `echo 0 > /proc/silk`, then 
+2) rebuild/reinstall the kernel module with
+
+```bash
+#!/bin/bash -eu
+
+SILK=$(dkms status | grep silk-guardian | awk -F, '{ print $1 }' | head -n 1)
+# SILK is for example silk-guardian/v1.0.0
+sudo dkms build -m "$SILK" --force  # uses the Makefile to build the kernel module (silk.ko)
+sudo dkms install -m "$SILK" --force  # copy the file to /usr/lib/modules/$(uname -r)/updates/dkms/silk.ko.zst + depmod
+sudo rmmod silk
+sudo modprobe silk
+sudo cat /proc/silk
+```
+
 ## Known issues
 silk-guardian conflicts with [lkrg](https://github.com/lkrg-org/lkrg). It does not like spawning a shell from the kernel :)
 ```
