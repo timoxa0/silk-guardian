@@ -1,7 +1,15 @@
 pacman -Syu
 pacman -Fy
 pacman -S fd ripgrep vim tmux git
-pacman -S --needed make gcc linux-headers usbutils base-devel
+pacman -S --needed make gcc usbutils base-devel
+
+if pacman -Qi linux-zen &>/dev/null; then
+  pacman -S --needed linux-zen-headers
+elif pacman -Qi linux-hardened &>/dev/null; then
+  pacman -S --needed linux-hardened-headers
+else
+  pacman -S --needed linux-headers
+fi
 
 vim ~/.tmux.conf
 bind h select-pane -L
