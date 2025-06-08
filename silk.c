@@ -197,7 +197,7 @@ static void usb_dev_change(struct usb_device *dev)
 #ifdef DEVLIST_IS_WHITELIST
   pr_info("silk: unknown device 0x%04x, 0x%04x (not whitelisted)\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
 #else
-  pr_info("silk: unknown device 0x%04x, 0x%04x (not blacklisted)\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
+  pr_info("silk: blacklisted device 0x%04x, 0x%04x\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
 #endif
   panic_time(dev);
 }
