@@ -1,5 +1,5 @@
 ## silk-guradian
-silk-guardian is a kill switch for unknown usb devices, build as kernel module. This is a fork of [NateBrune's silk-guardian](https://github.com/NateBrune/silk-guardian). I've  added some features, more usabilty and packaged it as a dkms module. There is an [Arch AUR package](https://aur.archlinux.org/packages/silk-guardian-dkms) for it. 
+silk-guardian is a kill switch for usb devices, build as kernel module. This is a fork of [kmile's fork](https://github.com/kmille/silk-guardian) of [NateBrune's silk-guardian](https://github.com/NateBrune/silk-guardian). I've added blacklist feature. There is an [Arch AUR package](https://aur.archlinux.org/packages/silk-guardian-blacklist-dkms) for it. 
 
 Check out how it looks like:
 
@@ -11,12 +11,23 @@ Configuration takes place in `/etc/silk.yaml`:
 [root@archlinux vagrant]# cat /etc/silk.yaml
 ---
 shell_command: echo $(date) >> /tmp/silk.txt
-shutdown: false
-whitelist:
+shutdown: true
+devlist:
   - 0x1234, 0x5678
+devlist_is_whitelist: false
 ```
-In this case, the usb device 0x1234,0x5678 is whitelisted. If it is plugged in (or out), a shell command is executed (`echo $(date) >> /tmp/silk.txt`). The computer is not turned off (`shutdown: false`). You can use it with [go-luks-suspend](https://aur.archlinux.org/packages/go-luks-suspend). During installation your current usb devices are added to the whitelist. If you change the config file, you have to rebuild the module:
+In this case, the usb device 0x1234,0x5678 is blacklisted. If it is plugged in (or out), a shell command is executed (`echo $(date) >> /tmp/silk.txt`). The computer is turned off (`shutdown: true`).
 
+```bash
+[root@archlinux vagrant]# cat /etc/silk.yaml
+---
+shell_command: echo $(date) >> /tmp/silk.txt
+shutdown: false
+devlist:
+  - 0x1234, 0x5678
+devlist_is_whitelist: true
+```
+In this case, the usb device 0x1234,0x5678 is whitelisted. If any other device is plugged in (or out), a shell command is executed (`echo $(date) >> /tmp/silk.txt`). The computer is not turned off (`shutdown: false`). You can use it with [go-luks-suspend](https://aur.archlinux.org/packages/go-luks-suspend). During installation your current usb devices are added to the whitelist. If you change the config file, you have to rebuild the module:
 ```bash
 [root@archlinux vagrant]# dkms status
 silk-guardian/v1.0.0, 6.3.8-arch1-1, x86_64: installed
