@@ -57,8 +57,8 @@ static ssize_t read_callback(struct file *file, char __user *ubuf,size_t count, 
 {
     char buf[BUFSIZE];
 	int i, len = 0;
-    const struct usb_device_id* ptr = whitelist_table;
-    const struct usb_device_id* endPtr = whitelist_table + sizeof(whitelist_table)/sizeof(whitelist_table[0]);
+    const struct usb_device_id* ptr = devlist_table;
+    const struct usb_device_id* endPtr = devlist_table + sizeof(devlist_table)/sizeof(devlist_table[0]);
     
     if(*ppos > 0 || count < BUFSIZE)
 		return 0;
@@ -83,7 +83,11 @@ static ssize_t read_callback(struct file *file, char __user *ubuf,size_t count, 
     
     // i is only used for buffer overflow prevention ...
     while ( ptr < endPtr && i < 50 ){
+#ifdef DEVLIST_IS_WHITELIST
        len += sprintf(buf + len, "whitelisted device: 0x%04x, 0x%04x\n", ptr->idVendor, ptr->idProduct);
+#else
+       len += sprintf(buf + len, "blacklisted device: 0x%04x, 0x%04x\n", ptr->idVendor, ptr->idProduct);
+#endif
        ptr++;
        i++;
     }
@@ -173,20 +177,28 @@ static void usb_dev_change(struct usb_device *dev)
 {
   const struct usb_device_id *dev_id;
 
-  /* Check our whitelist to see if we want to ignore this device */
-   unsigned long whitelist_len = sizeof(whitelist_table)/sizeof(whitelist_table[0]);
+  /* Check our devlist to see if we want to ignore this device */
+   unsigned long devlist_len = sizeof(devlist_table)/sizeof(devlist_table[0]);
    int i; // GNU89 standard
-   for(i = 0; i < whitelist_len; i++)
+   for(i = 0; i < devlist_len; i++)
    {
-      dev_id = &whitelist_table[i];
+      dev_id = &devlist_table[i];
+#ifdef DEVLIST_IS_WHITELIST
       if (usb_match_device(dev, dev_id))
+#else
+      if (!usb_match_device(dev, dev_id))
+#endif
       {
          pr_info("silk: device 0x%04x, 0x%04x is ignored\n", dev_id->idVendor, dev_id->idProduct);
          return;
       }
    }
 
+#ifdef DEVLIST_IS_WHITELIST
   pr_info("silk: unknown device 0x%04x, 0x%04x (not whitelisted)\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
+#else
+  pr_info("silk: unknown device 0x%04x, 0x%04x (not blacklisted)\n", dev->descriptor.idVendor, dev->descriptor.idProduct);
+#endif
   panic_time(dev);
 }
 

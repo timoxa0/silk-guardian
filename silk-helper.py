@@ -9,12 +9,17 @@ import usb.core
 config_file = Path("/etc/silk.yaml")
 
 config_template = """
-/* List of all USB devices you want whitelisted (i.e. ignored) */
-static const struct usb_device_id whitelist_table[] = {
-    {% for entry in whitelist -%}
+/* List of all USB devices you want whitelisted or blacklisted */
+static const struct usb_device_id devlist_table[] = {
+    {% for entry in devlist -%}
         { USB_DEVICE({{ entry }}) },
     {% endfor %}
 };
+
+/* devlist is whitelist */
+{% if devlist_is_whitelist %}
+#define DEVLIST_IS_WHITELIST
+{% endif %}
 
 {% if shutdown %}
 /* shutdown in case of an unknown device */
@@ -47,9 +52,10 @@ def warn(m):
 
 def generate_config_file():
     config = {}
-    config["whitelist"] = []
+    config["devlist"] = []
     for dev in usb.core.find(find_all=True):
-        config["whitelist"].append(f"0x{dev.idVendor:04x}, 0x{dev.idProduct:04x}")
+        config["devlist"].append(f"0x{dev.idVendor:04x}, 0x{dev.idProduct:04x}")
+    config["devlist_is_whitelist"] = True
     config["shutdown"] = False
     config["shell_command"] = "echo $(date) >> /tmp/silk.txt"
 
@@ -76,21 +82,25 @@ def generate_header_file():
     with config_file.open() as f:
         y = yaml.safe_load(f)
 
-    if type(y["whitelist"]) != list:
-        fail(f"'whitelist' must be a list of strings. Given: {type(y['whitelist'])}")
+    if type(y["devlist"]) != list:
+        fail(f"'devlist' must be a list of strings. Given: {type(y['devlist'])}")
 
-    for w in y["whitelist"]:
+    for w in y["devlist"]:
         if type(w) != str:
             fail(f"'{w}' must be a string")
         if w.count(",") != 1:
             fail(f"Every line must be in the format '0x0000, 0x0000' (, wrong). Found: '{w}'")
         if w.count("0x") != 2:
             fail(f"Every line must be in the format '0x0000, 0x0000' (0x wrong). Found: '{w}'")
+    
+    if type(y["devlist_is_whitelist"]) != bool:
+        fail(f"'devlist_is_whitelist' must be a boolean. Given: {type(y['devlist_is_whitelist'])}")
 
     if type(y["shutdown"]) != bool:
         fail(f"'shutdown' must be a boolean. Given: {type(y['shutdown'])}")
 
-    print(template.render(whitelist=y["whitelist"],
+    print(template.render(devlist=y["devlist"],
+                          devlist_is_whitelist=y["devlist_is_whitelist"],
                           shutdown=y["shutdown"],
                           shell_command=y["shell_command"]))
 
