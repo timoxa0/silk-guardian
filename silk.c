@@ -9,7 +9,7 @@
 #include "config.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Greg Kroah-Hartman and Nate Brune, adjusted by kmille");
+MODULE_AUTHOR("Greg Kroah-Hartman and Nate Brune, adjusted by kmille and tx0");
 MODULE_DESCRIPTION("A module that protects you from having a terrible horrible no good very bad day.");
 
 
